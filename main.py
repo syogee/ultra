@@ -11,6 +11,7 @@ import subprocess
 import psutil
 import sys
 import time
+import random
 
 from viewer import ViewerWindow
 
@@ -37,6 +38,27 @@ def load_or_create_config():
         except Exception:
             pass
             
+    # Generate new config if missing
+    import random
+    raw_id = str(random.randint(10_000_000, 99_999_999))
+    my_id = f"{raw_id[:2]} {raw_id[2:5]} {raw_id[5:]}" # no spaces
+    my_password = str(random.randint(10000, 99999))
+
+    print(raw_id,my_id,my_password )
+    
+    config = {
+        "host_id": my_id,
+        "password": my_password,
+        "relay_host": "127.0.0.1"
+    }
+    
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(config, f)
+    except Exception:
+        pass
+        
+    return config
 
 def save_config(config):
     try:
@@ -55,13 +77,7 @@ def get_local_ips():
     except Exception:
         pass
     if not ips:
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ips.append(s.getsockname()[0])
-            s.close()
-        except Exception:
-            ips.append("127.0.0.1")
+        ips.append("127.0.0.1")
     return ips
 
 class UltraApp(ctk.CTk):
@@ -79,18 +95,10 @@ class UltraApp(ctk.CTk):
         self.local_ips = get_local_ips()
         
         # Now load the config first so we have the ID and Password generated
-        import random
-        raw_id = str(random.randint(10_000_000, 99_999_999))
-        self.my_id = f"{raw_id[:2]} {raw_id[2:5]} {raw_id[5:]}" # no spaces
-        self.my_password = str(random.randint(10000, 99999))
-        
-        config = {
-            "host_id": self.my_id,
-            "password": self.my_password,
-            "relay_host": "127.0.0.1"
-        }
-        
-        save_config(config)
+        self.config = load_or_create_config()
+        self.relay_host = self.config.get("relay_host", "127.0.0.1")
+        self.my_id = self.config.get("host_id", "Unknown")
+        self.my_password = self.config.get("password", "Unknown")
         
         # Ensure service is running
         self._on_start()
@@ -372,11 +380,19 @@ class UltraApp(ctk.CTk):
         if icon:
             icon.stop()
         self.after(0, self.deiconify)
+        
+    def delete_config():
+        try:
+            if os.path.exists(CONFIG_FILE):
+                os.remove(CONFIG_FILE)
+        except Exception as e:
+            print(f"Failed to delete config: {e}")
 
     def quit_app(self, icon=None, item=None):
         if icon:
             icon.stop()
         self._on_stop()
+        self.delete_config()
         self.quit()
 
 if __name__ == "__main__":
