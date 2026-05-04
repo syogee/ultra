@@ -34,8 +34,8 @@ SENDABLE = {
 
 class ViewerWindow:
     def __init__(self, target_id, password, relay_host='127.0.0.1', relay_port=9999):
-        self.target_id = target_id
-        self.password = password
+        self.target_id = str(target_id)
+        self.password = str(password)
         self.relay_host = relay_host
         self.relay_port = relay_port
         

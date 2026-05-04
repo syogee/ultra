@@ -16,8 +16,8 @@ pyautogui.PAUSE = 0
 
 class HostService:
     def __init__(self, host_id, password, relay_host='127.0.0.1', relay_port=9999):
-        self.host_id = host_id
-        self.password = password
+        self.host_id = str(host_id)
+        self.password = str(password)
         self.relay_host = relay_host
         self.relay_port = relay_port
         self.running = False

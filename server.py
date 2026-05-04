@@ -21,8 +21,8 @@ def handle_client(client_sock, addr):
 
     if msg_type == MsgType.REGISTER_HOST:
         info = json.loads(data.decode('utf-8'))
-        host_id = info['id']
-        password = info['password']
+        host_id = str(info['id'])
+        password = str(info['password'])
         
         with hosts_lock:
             hosts[host_id] = {'password': password, 'sock': client_sock, 'viewer_sock': None}

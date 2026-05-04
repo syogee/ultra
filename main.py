@@ -41,7 +41,7 @@ def load_or_create_config():
     # Generate new config if missing
     import random
     raw_id = str(random.randint(10_000_000, 99_999_999))
-    my_id = f"{raw_id[:2]} {raw_id[2:5]} {raw_id[5:]}" # no spaces
+    my_id = str(f"{raw_id[:2]} {raw_id[2:5]} {raw_id[5:]}") # no spaces
     my_password = str(random.randint(10000, 99999))
 
     print(raw_id,my_id,my_password )
@@ -380,8 +380,8 @@ class UltraApp(ctk.CTk):
         if icon:
             icon.stop()
         self.after(0, self.deiconify)
-        
-    def delete_config():
+
+    def delete_config(self):
         try:
             if os.path.exists(CONFIG_FILE):
                 os.remove(CONFIG_FILE)
@@ -393,7 +393,8 @@ class UltraApp(ctk.CTk):
             icon.stop()
         self._on_stop()
         self.delete_config()
-        self.quit()
+        self.destroy()
+        os._exit(0)
 
 if __name__ == "__main__":
     app = UltraApp()
