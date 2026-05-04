@@ -59,8 +59,8 @@ def handle_client(client_sock, addr):
 
     elif msg_type == MsgType.REGISTER_VIEWER:
         info = json.loads(data.decode('utf-8'))
-        target_id = str(info['id'])
-        password = str(info['password'])
+        target_id = info['id']
+        password = info['password']
         
         with hosts_lock:
             host = hosts.get(target_id)

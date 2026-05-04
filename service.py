@@ -15,9 +15,9 @@ def load_or_create_config():
             print(f"Error loading config: {e}")
             
     # Generate new config if missing or corrupted
-    raw_id = str(random.randint(100000000, 999999999))
-    my_id = f"{raw_id[:3]}{raw_id[3:6]}{raw_id[6:]}" # no spaces
-    my_password = str(random.randint(1000, 9999))
+    raw_id = str(random.randint(10_000_000, 99_999_999))
+    my_id = f"{raw_id[:2]} {raw_id[2:5]} {raw_id[5:]}" # "XX XXX XXX"
+    my_password = str(random.randint(10000, 99999))
     
     config = {
         "host_id": my_id,

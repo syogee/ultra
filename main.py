@@ -37,25 +37,6 @@ def load_or_create_config():
         except Exception:
             pass
             
-    # Generate new config if missing
-    import random
-    raw_id = str(random.randint(100000000, 999999999))
-    my_id = f"{raw_id[:3]}{raw_id[3:6]}{raw_id[6:]}" # no spaces
-    my_password = str(random.randint(1000, 9999))
-    
-    config = {
-        "host_id": my_id,
-        "password": my_password,
-        "relay_host": "127.0.0.1"
-    }
-    
-    try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(config, f)
-    except Exception:
-        pass
-        
-    return config
 
 def save_config(config):
     try:
@@ -74,7 +55,13 @@ def get_local_ips():
     except Exception:
         pass
     if not ips:
-        ips.append("127.0.0.1")
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ips.append(s.getsockname()[0])
+            s.close()
+        except Exception:
+            ips.append("127.0.0.1")
     return ips
 
 class UltraApp(ctk.CTk):
@@ -92,10 +79,18 @@ class UltraApp(ctk.CTk):
         self.local_ips = get_local_ips()
         
         # Now load the config first so we have the ID and Password generated
-        self.config = load_or_create_config()
-        self.relay_host = self.config.get("relay_host", "127.0.0.1")
-        self.my_id = self.config.get("host_id", "Unknown")
-        self.my_password = self.config.get("password", "Unknown")
+        import random
+        raw_id = str(random.randint(10_000_000, 99_999_999))
+        self.my_id = f"{raw_id[:2]} {raw_id[2:5]} {raw_id[5:]}" # no spaces
+        self.my_password = str(random.randint(10000, 99999))
+        
+        config = {
+            "host_id": self.my_id,
+            "password": self.my_password,
+            "relay_host": "127.0.0.1"
+        }
+        
+        save_config(config)
         
         # Ensure service is running
         self._on_start()
