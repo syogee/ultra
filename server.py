@@ -59,12 +59,12 @@ def handle_client(client_sock, addr):
 
     elif msg_type == MsgType.REGISTER_VIEWER:
         info = json.loads(data.decode('utf-8'))
-        target_id = info['id']
-        password = info['password']
+        target_id = str(info['id'])
+        password = str(info['password'])
         
         with hosts_lock:
             host = hosts.get(target_id)
-            if host and host['password'] == password:
+            if host and str(host['password']) == password:
                 if host['viewer_sock'] is not None:
                     send_msg(client_sock, MsgType.AUTH_RESP, json.dumps({'status': 'error', 'msg': 'Host already has a viewer'}).encode())
                     client_sock.close()

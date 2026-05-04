@@ -27,7 +27,7 @@ TEXT_DIM  = "#9090B0"
 ACCENT_BG = "#3A3A5C"
 FIELD_BG  = "#22223A"
 
-CONFIG_FILE = os.path.join(os.path.expanduser("~"), r"\Desktop\ultra\config.json")
+CONFIG_FILE = os.path.join(os.path.expanduser("~"), "ultra_viewer_config.json")
 
 def load_or_create_config():
     if os.path.exists(CONFIG_FILE):
@@ -347,8 +347,8 @@ class UltraApp(ctk.CTk):
         self._check_service_status()
 
     def _on_connect(self):
-        partner_id = self.ent_ip.get().strip().replace(" ", "")
-        partner_pass = self.ent_pass.get().strip()
+        partner_id = str(self.ent_ip.get().strip().replace(" ", ""))
+        partner_pass = str(self.ent_pass.get().strip())
         
         if not partner_id or not partner_pass:
             messagebox.showwarning("Input required", "Enter the Partner ID and Password.")
