@@ -16,7 +16,7 @@ def load_or_create_config():
             
     # Generate new config if missing or corrupted
     raw_id = str(random.randint(10_000_000, 99_999_999))
-    my_id = str(f"{raw_id[:2]} {raw_id[2:5]} {raw_id[5:]}")
+    my_id = "".join(raw_id.split())
     my_password = str(random.randint(10000, 99999))
     
     config = {

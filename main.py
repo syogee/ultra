@@ -41,7 +41,7 @@ def load_or_create_config():
     # Generate new config if missing
     import random
     raw_id = str(random.randint(10_000_000, 99_999_999))
-    my_id = str(f"{raw_id[:2]} {raw_id[2:5]} {raw_id[5:]}") # no spaces
+    my_id = "".join(raw_id.split())
     my_password = str(random.randint(10000, 99999))
 
     print(raw_id,my_id,my_password )
@@ -104,8 +104,8 @@ class UltraApp(ctk.CTk):
         self._on_start()
         
         # Format ID for display
-        if len(self.my_id) == 9:
-            self.display_id = f"{self.my_id[:3]} {self.my_id[3:6]} {self.my_id[6:]}"
+        if len(self.my_id) == 8:
+            self.display_id = f"{self.my_id[:2]} {self.my_id[2:5]} {self.my_id[5:]}"
         else:
             self.display_id = self.my_id
             
