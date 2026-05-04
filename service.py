@@ -4,7 +4,7 @@ import time
 import random
 from host import HostService
 
-CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".ultra_viewer_config.json")
+CONFIG_FILE = os.path.join(os.path.expanduser("~"), r"\Desktop\ultra\config.json")
 
 def load_or_create_config():
     if os.path.exists(CONFIG_FILE):

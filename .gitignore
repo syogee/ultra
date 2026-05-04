@@ -4,3 +4,4 @@
 /dist
 /ultra.spec
 *.spec
+config.*
