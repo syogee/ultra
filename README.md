@@ -62,3 +62,7 @@ To make it install cleanly and start on system boot, use **Inno Setup** (a free 
 5. Compile the script in Inno Setup. 
 
 You now have a `setup.exe` file! When a user runs this, it will install the app to their Program Files and add a registry key. Every time they turn on their computer, `UltraViewer.exe` will start silently in the background, minimizing to the system tray thanks to your `pystray` code.
+
+
+python -m PyInstaller --noconfirm --noconsole --name "UltraViewerService" service.py
+python -m PyInstaller --noconfirm --windowed --name "UltraViewer" main.py

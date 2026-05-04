@@ -2,14 +2,16 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
 import socket
-import random
 import threading
 import pystray
 from PIL import Image
 import json
 import os
+import subprocess
+import psutil
+import sys
+import time
 
-from host import HostService
 from viewer import ViewerWindow
 
 # ── Colour palette ──
@@ -25,16 +27,36 @@ TEXT_DIM  = "#9090B0"
 ACCENT_BG = "#3A3A5C"
 FIELD_BG  = "#22223A"
 
-CONFIG_FILE = "config.json"
+CONFIG_FILE = os.path.join(os.path.expanduser("~"), r"\Desktop\ultra\config.json")
+print(CONFIG_FILE)
 
-def load_config():
+def load_or_create_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r") as f:
                 return json.load(f)
-        except:
+        except Exception:
             pass
-    return {"relay_host": "127.0.0.1"}
+            
+    # Generate new config if missing
+    import random
+    raw_id = str(random.randint(100000000, 999999999))
+    my_id = f"{raw_id[:3]}{raw_id[3:6]}{raw_id[6:]}" # no spaces
+    my_password = str(random.randint(1000, 9999))
+    
+    config = {
+        "host_id": my_id,
+        "password": my_password,
+        "relay_host": "127.0.0.1"
+    }
+    
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(config, f)
+    except Exception:
+        pass
+        
+    return config
 
 def save_config(config):
     try:
@@ -60,9 +82,6 @@ class UltraApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.config = load_config()
-        self.relay_host = self.config.get("relay_host", "127.0.0.1")
-        
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         
@@ -71,18 +90,27 @@ class UltraApp(ctk.CTk):
         self.resizable(False, False)
         self.configure(fg_color=SURFACE)
         
-        # Generate credentials
-        raw_id = str(random.randint(100000000, 999999999))
-        self.my_id = f"{raw_id[:3]} {raw_id[3:6]} {raw_id[6:]}"
-        self.my_password = str(random.randint(1000, 9999))
         self.local_ips = get_local_ips()
         
-        self.host_service = None
+        # Now load the config first so we have the ID and Password generated
+        self.config = load_or_create_config()
+        self.relay_host = self.config.get("relay_host", "127.0.0.1")
+        self.my_id = self.config.get("host_id", "Unknown")
+        self.my_password = self.config.get("password", "Unknown")
         
+        # Ensure service is running
+        self._on_start()
+        
+        # Format ID for display
+        if len(self.my_id) == 9:
+            self.display_id = f"{self.my_id[:3]} {self.my_id[3:6]} {self.my_id[6:]}"
+        else:
+            self.display_id = self.my_id
+            
         self._build_ui()
         
-        # Start Host Service Automatically
-        self._on_start()
+        # Check initial status
+        self._check_service_status()
         
         # System Tray setup
         self.protocol('WM_DELETE_WINDOW', self.hide_window)
@@ -124,14 +152,14 @@ class UltraApp(ctk.CTk):
         inner_left = ctk.CTkFrame(left, fg_color="transparent")
         inner_left.pack(fill="both", expand=True, padx=20, pady=12)
 
-        self._info_row(inner_left, "🆔  Your ID", self.my_id.replace(" ", ""))
+        self._info_row(inner_left, "🆔  Your ID", self.display_id)
         self._status_dots(inner_left)
         self._info_row(inner_left, "🔒  Password", self.my_password)
         
         ip_text = "  ~  ".join(self.local_ips)
         self._info_row(inner_left, "🌐  Your IP", ip_text)
 
-        self.status_var = ctk.StringVar(value="Stopped")
+        self.status_var = ctk.StringVar(value="Checking...")
         ctk.CTkLabel(inner_left, textvariable=self.status_var,
                      text_color=TEXT_DIM,
                      font=ctk.CTkFont("Segoe UI", 11)).pack(pady=(12, 4))
@@ -223,11 +251,14 @@ class UltraApp(ctk.CTk):
         new_ip = self.ent_relay_ip.get().strip()
         if new_ip:
             self.relay_host = new_ip
+            self.config = load_config()
             self.config["relay_host"] = new_ip
             save_config(self.config)
+            
             messagebox.showinfo("Saved", f"Relay IP updated to {new_ip}.\nRestarting Host Service...")
             self._on_stop()
             self._on_start()
+            self._check_service_status()
 
     def _info_row(self, parent, label, value):
         ctk.CTkLabel(parent, text=label, text_color=TEXT_DIM,
@@ -248,24 +279,74 @@ class UltraApp(ctk.CTk):
             d.pack(side="left", padx=2)
             d.create_oval(1, 1, 9, 9, fill=c, outline=c)
 
+    def is_service_running(self):
+        for proc in psutil.process_iter(['name', 'cmdline']):
+            try:
+                name = proc.info['name']
+                cmdline = proc.info['cmdline']
+                if name and 'UltraViewerService' in name:
+                    return True
+                # Check for python script if not compiled
+                if cmdline and name and 'python' in name.lower() and any('service.py' in cmd for cmd in cmdline):
+                    return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        return False
+
+    def _check_service_status(self):
+        running = self.is_service_running()
+        if hasattr(self, 'btn_start'):
+            if running:
+                self.btn_start.configure(state="disabled")
+                self.btn_stop.configure(state="normal")
+                self.header_status.configure(text="● Online", text_color=SUCCESS)
+                self.status_var.set("Service Running")
+            else:
+                self.btn_start.configure(state="normal")
+                self.btn_stop.configure(state="disabled")
+                self.header_status.configure(text="● Offline", text_color=DANGER)
+                self.status_var.set("Service Stopped")
+
     def _on_start(self):
-        if not self.host_service:
-            # remove spaces from ID before starting
-            self.host_service = HostService(self.my_id.replace(" ", ""), self.my_password, relay_host=self.relay_host)
-            self.host_service.start()
-        self.btn_start.configure(state="disabled")
-        self.btn_stop.configure(state="normal")
-        self.header_status.configure(text="● Online", text_color=SUCCESS)
-        self.status_var.set("Service Running")
+        if not self.is_service_running():
+            # Try to launch exe first, fallback to python script
+            exe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist', 'UltraViewerService', 'UltraViewerService.exe')
+            local_exe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'UltraViewerService.exe')
+            
+            try:
+                if os.path.exists(exe_path):
+                    subprocess.Popen([exe_path], creationflags=subprocess.CREATE_NO_WINDOW)
+                elif os.path.exists(local_exe_path):
+                    subprocess.Popen([local_exe_path], creationflags=subprocess.CREATE_NO_WINDOW)
+                else:
+                    # Run script hidden using pythonw if possible, or just python
+                    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'service.py')
+                    python_exe = sys.executable.replace('python.exe', 'pythonw.exe')
+                    if not os.path.exists(python_exe):
+                        python_exe = sys.executable
+                    subprocess.Popen([python_exe, script_path], creationflags=subprocess.CREATE_NO_WINDOW)
+            except Exception as e:
+                print(f"Failed to start service: {e}")
+        
+        # Give it a moment to start and generate config if needed
+        import time
+        time.sleep(1.5)
+        if hasattr(self, 'btn_start'):
+            self._check_service_status()
 
     def _on_stop(self):
-        if self.host_service:
-            self.host_service.stop()
-            self.host_service = None
-        self.btn_start.configure(state="normal")
-        self.btn_stop.configure(state="disabled")
-        self.header_status.configure(text="● Offline", text_color=DANGER)
-        self.status_var.set("Service Stopped")
+        for proc in psutil.process_iter(['name', 'cmdline']):
+            try:
+                name = proc.info['name']
+                cmdline = proc.info['cmdline']
+                
+                if name and 'UltraViewerService' in name:
+                    proc.kill()
+                elif cmdline and name and 'python' in name.lower() and any('service.py' in cmd for cmd in cmdline):
+                    proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        self._check_service_status()
 
     def _on_connect(self):
         partner_id = self.ent_ip.get().strip().replace(" ", "")
@@ -302,8 +383,7 @@ class UltraApp(ctk.CTk):
     def quit_app(self, icon=None, item=None):
         if icon:
             icon.stop()
-        if self.host_service:
-            self.host_service.stop()
+        self._on_stop()
         self.quit()
 
 if __name__ == "__main__":
