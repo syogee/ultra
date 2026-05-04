@@ -28,7 +28,6 @@ ACCENT_BG = "#3A3A5C"
 FIELD_BG  = "#22223A"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), r"\Desktop\ultra\config.json")
-print(CONFIG_FILE)
 
 def load_or_create_config():
     if os.path.exists(CONFIG_FILE):
@@ -251,7 +250,6 @@ class UltraApp(ctk.CTk):
         new_ip = self.ent_relay_ip.get().strip()
         if new_ip:
             self.relay_host = new_ip
-            self.config = load_config()
             self.config["relay_host"] = new_ip
             save_config(self.config)
             
