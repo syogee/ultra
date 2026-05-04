@@ -1,0 +1,7 @@
+dxcam==0.0.5
+pynput==1.7.6
+Pillow==10.3.0
+customtkinter==5.2.2
+pystray==0.19.5
+opencv-python==4.9.0.80
+numpy==1.26.4
